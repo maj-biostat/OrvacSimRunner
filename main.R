@@ -132,7 +132,7 @@ main <- function(){
   starttime <- Sys.time()
   
   # initiate clusters
-  debug = T
+  debug = F
   cl <- NA
   if(!debug){
     cl <- makeCluster(parallel::detectCores() - 2, outfile="")
@@ -143,9 +143,7 @@ main <- function(){
   }
   
   cfg <- get_cfg(print = F)
-  cfg$n_sims <- 1
-  # cfg$post_draw <- 1000
-  
+
   results <- foreach(i = 1:cfg$n_sims,
                    .errorhandling = 'pass',
                    .packages=pkgs
@@ -160,16 +158,19 @@ main <- function(){
     # flog.info("Finished trial: sim = %s", i)
     return(res)
   }
-#results[[1]]
-  # dfres1 <- data.frame()
-  # dfres2 <- data.frame()
-  # 
-  # for(i in 1:length(results)){
-  #   myv <- unlist(results[[i]][1:25])
-  #   nm <- names(myv)
-  #   dfres1 <- rbind(dfres1, myv)
-  #   colnames(dfres1) <- nm
-  # }
+
+  dfres1 <- data.frame()
+  dfres2 <- data.frame()
+
+  for(i in 1:length(results)){
+    myv <- unlist(results[[i]][1:21])
+    nm <- names(myv)
+    
+    dfres1 <- rbind(dfres1, myv)
+    colnames(dfres1) <- nm
+  }
+  
+
 
   endtime <- Sys.time()
   difftime(endtime, starttime, units = "hours")
@@ -181,7 +182,7 @@ main <- function(){
     paste0("res-",
       format(Sys.time(), "%Y-%m-%d-%H-%M-%S"), ".RDS"))
 
-  saveRDS(list(results=results, 
+  saveRDS(list(results=dfres1, 
     cfg = cfg, 
     warnings = w,
     starttime = starttime, 
