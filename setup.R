@@ -73,6 +73,9 @@ get_cfg <- function(cfgfile = "cfg.yaml", print = T){
     l$n_sims <- tt$n_sims
   }
   
+  l$print_cfg <- tt$print_cfg
+  l$print_intrm <- tt$print_intrm
+
   if("seed" %in% names(opt)){
     l$seed <- opt$seed
   } else {

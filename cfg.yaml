@@ -5,6 +5,10 @@
 
 id_sim: 1
 
+print_cfg: 0
+print_intrm: 0
+
+
 n_sims: 3
 seed: 1
 

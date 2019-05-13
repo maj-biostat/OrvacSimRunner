@@ -126,7 +126,7 @@ main <- function(){
   source("setup.R")
   
   pkgs <- c("data.table", "futile.logger", "configr", "survival", 
-           "foreach", "truncnorm", "beepr", "orvacsim")
+           "foreach", "truncnorm", "beepr", "OrvacRCT")
 
 
   starttime <- Sys.time()
