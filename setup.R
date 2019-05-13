@@ -167,7 +167,8 @@ get_cfg <- function(cfgfile = "cfg.yaml", print = T){
   l$thresh_pp_fut <- tt$thresh_pp_fut
   l$thresh_pp_es <- tt$thresh_pp_es
   l$thresh_p_sup <- tt$thresh_p_sup
-
+  l$thresh_p_fut <- tt$thresh_p_fut
+  
   l$post_draw <- 1000
 
   
