@@ -29,7 +29,7 @@ out <- c("#!/bin/bash")
 seeds <- sample(idx_start:idx_end, nrow(d))
 for(i in 1:nrow(d)){
   
-  out <- c(out, paste0("/usr/bin/Rscript main_4.R -f cfg1.yaml -o T -i SIM", seeds[i],
+  out <- c(out, paste0("/usr/bin/Rscript main.R -f cfg1.yaml -o T -i SIM", seeds[i],
                  " -n ", nsim,
                  " -s ", seeds[i],
                  " -a ", d$accural[i],

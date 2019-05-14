@@ -28,7 +28,7 @@ main <- function(){
   debug = F
   cl <- NA
   if(!debug){
-    cl <- makeCluster(parallel::detectCores() - 4, outfile="")
+    cl <- makeCluster(parallel::detectCores() - 3, outfile="")
     # cl <- makeCluster(3, outfile="")
     registerDoParallel(cl)
   } else {
