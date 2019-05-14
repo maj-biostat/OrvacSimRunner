@@ -223,13 +223,13 @@ for(fname in resfiles){
 df_0 <- df_all %>%
   dplyr::arrange(desc(fname)) %>%
   dplyr::mutate(row = 1:n()) %>%
-  dplyr::select(row, nsim, 
+  dplyr::select(row, 
                 baseclin, trtclin, basesero, trtsero, accrual,info_delay,
                 f_prob_sup, f_prob_fut, f_prob_stopv, f_prob_incon, 
                 f_ss_clin, f_ss_immu, 
                 f_ss_lt1, f_ss_lt2, f_ss_lt3,
                 f_prob_fin_clin, f_prob_fin_immi, 
-                fname, idsim,  date) %>%
+                fname, nsim, idsim,  date) %>%
   dplyr::select(-row)
 
 
@@ -238,7 +238,7 @@ df_blank <- df_0 %>% dplyr::slice(1L)
 
 digits <- c(0, 0, 2, 2, 0, 2,
             0, 0, 0, 0, 0,0,0,
-            0, 0, 0, 0,  0)
+            0, 0, 0, 0,  0, 0)
 options(knitr.kable.NA = '-')
 showwarn <- length(mywarnings > 0)
 
@@ -255,13 +255,13 @@ print("WARNINGS PRESENT IN DATA!!")
 ```{r, echo = F, eval = T}
 
 kable(df_0 %>% 
-  dplyr::select(-idsim, -nsim, -date) %>%
+  dplyr::select(-idsim, -date) %>%
     dplyr::arrange(desc(fname))  ,
       caption = paste0("Table 6. Combined Simulation Results"),
       col.names = c("ctl", "trt", "ctl", "trt", "accrual", "delay",
                     "e.s.", "e.f", "s.v.", "n.d", 
                     "enrolled", "blood res", "P(<250)", "P(<500)", "P(<750)", 
-                    "clin", "immu",  "fname"),
+                    "clin", "immu",  "fname", "nsim"),
       digits = digits) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = F, position = "left",
@@ -271,7 +271,7 @@ kable(df_0 %>%
                      "Info rate" = 2, 
                      "Interim" = 4,
                      "SS" = 5, 
-                     "Wins @ final" = 2, " " = 1))
+                     "Wins @ final" = 2, " " = 2))
 
 ```
 

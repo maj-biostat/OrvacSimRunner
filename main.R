@@ -7,6 +7,37 @@ library(data.table)
 source("setup.R")
 
 
+play_random <- function(){
+  
+  library(OrvacRCT)
+  library(configr)
+  library(doParallel)
+  library(foreach)
+  library(optparse)
+  library(data.table)
+  source("setup.R")
+  
+  
+  library(rbenchmark)
+  
+  X <- test_rbinom_r(1000, 0.3)
+  Y <- test_rbinom_r(1000, 0.3)
+  
+  par(mfrow = c(1, 2))
+  hist(X)
+  hist(Y)
+  
+  benchmark("rbinom" = {
+    X <- test_rbinom_r(1000, 0.3)
+    },
+    "armabinom" = {
+    X <- test_armabinom(1000, 0.3)
+    },
+  replications = 10000,
+  columns = c("test", "replications", "elapsed",
+              "relative", "user.self", "sys.self"))
+}
+
 play_interims <- function(){
   
   library(OrvacRCT)
