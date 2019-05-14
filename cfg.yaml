@@ -70,7 +70,7 @@ thresh_p_sup: 0.96
 thresh_p_fut: 0.05
 
 # conjugate posterior
-post_draw: 1000
+post_draw: 5000
 
 
 

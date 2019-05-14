@@ -4,8 +4,7 @@ author: "Mark Jones"
 date: "`r Sys.time()`"
 output:
   html_document:
-    classoption: landscape
-    css: style.css
+    classoption: portrait
     number_sections: yes
     self_contained: yes
     theme: united
@@ -22,6 +21,8 @@ editor_options:
   chunk_output_type: console
 classoption: landscape
 ---
+
+<!-- css: style.css -->
 
 <!--    toc: yes
     toc_float: true -->
@@ -78,6 +79,9 @@ resfiles <- list.files("out", pattern = "*.RDS")
 
 df_all <- data.frame(stringsAsFactors = F)
 df_fig1 <- data.frame(stringsAsFactors = F)
+df_res_all <- data.frame(stringsAsFactors = F)
+
+mysim <- 1
 # fname = resfiles[1]
 for(fname in resfiles){
   d1 <- readRDS(file.path(getwd(), "out", fname))
@@ -189,7 +193,8 @@ for(fname in resfiles){
                      prob_fin_clin = probclin,
     
                      fname = flab, stringsAsFactors = F, 
-                     date = mydate)
+                     date = mydate,
+    durn = as.numeric(d1$duration))
   
   # summary data
   dtmp <- dtmp %>%
@@ -216,6 +221,10 @@ for(fname in resfiles){
   df_outcome$fname <- fname
   df_outcome$simname <- d1$cfg$idsim
   df_fig1 <- rbind(df_fig1,  df_outcome, stringsAsFactors  = F)
+  
+  df_res$mysim <- mysim
+  mysim <- mysim + 1
+  df_res_all <- rbind(df_res_all, df_res)
 
 }
 
@@ -229,7 +238,7 @@ df_0 <- df_all %>%
                 f_ss_clin, f_ss_immu, 
                 f_ss_lt1, f_ss_lt2, f_ss_lt3,
                 f_prob_fin_clin, f_prob_fin_immi, 
-                fname, nsim, idsim,  date) %>%
+                fname, nsim, idsim,  date, durn) %>%
   dplyr::select(-row)
 
 
@@ -238,13 +247,15 @@ df_blank <- df_0 %>% dplyr::slice(1L)
 
 digits <- c(0, 0, 2, 2, 0, 2,
             0, 0, 0, 0, 0,0,0,
-            0, 0, 0, 0,  0, 0)
+            0, 0, 0, 0,  0, 0, 3)
 options(knitr.kable.NA = '-')
 showwarn <- length(mywarnings > 0)
 
 #max_file_date <- as.POSIXct("2019-03-13 23:11:48")
 
 ```
+
+
 
 
 ```{r, echo = showwarn, eval=showwarn}
@@ -261,7 +272,7 @@ kable(df_0 %>%
       col.names = c("ctl", "trt", "ctl", "trt", "accrual", "delay",
                     "e.s.", "e.f", "s.v.", "n.d", 
                     "enrolled", "blood res", "P(<250)", "P(<500)", "P(<750)", 
-                    "clin", "immu",  "fname", "nsim"),
+                    "clin", "immu",  "fname", "nsim", "duration"),
       digits = digits) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = F, position = "left",
@@ -271,10 +282,48 @@ kable(df_0 %>%
                      "Info rate" = 2, 
                      "Interim" = 4,
                      "SS" = 5, 
-                     "Wins @ final" = 2, " " = 2))
+                     "Wins @ final" = 2, " " = 3))
 
 ```
 
 
+# Figures
+
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = c_p_fin, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Clinical - final posterior prob of trt success")
+```
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = c_ppmax, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Clinical - final predictive prob at max")
+```
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = c_ppn, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Clinical - predictive prob at interim")
+```
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = i_p_fin, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Immunological - final posterior prob of trt success")
+```
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = i_ppmax, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Immunological - final predictive prob at max")
+```
+
+```{r, echo = F, fig.width=4, fig.height=4}
+ggplot(df_res_all, aes(x = i_ppn, group = paste0(mysim)))+
+    geom_density()+
+  ggtitle("Immunological - predictive prob at interim")
+```
 
 

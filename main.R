@@ -7,144 +7,6 @@ library(data.table)
 source("setup.R")
 
 
-play_random <- function(){
-  
-  library(OrvacRCT)
-  library(configr)
-  library(doParallel)
-  library(foreach)
-  library(optparse)
-  library(data.table)
-  source("setup.R")
-  
-  
-  library(rbenchmark)
-  
-  X <- test_rbinom_r(1000, 0.3)
-  Y <- test_rbinom_r(1000, 0.3)
-  
-  par(mfrow = c(1, 2))
-  hist(X)
-  hist(Y)
-  
-  benchmark("rbinom" = {
-    X <- test_rbinom_r(1000, 0.3)
-    },
-    "armabinom" = {
-    X <- test_armabinom(1000, 0.3)
-    },
-  replications = 10000,
-  columns = c("test", "replications", "elapsed",
-              "relative", "user.self", "sys.self"))
-}
-
-play_interims <- function(){
-  
-  library(OrvacRCT)
-  library(configr)
-  library(doParallel)
-  library(foreach)
-  library(optparse)
-  library(data.table)
-  source("setup.R")
-
-  cfg <- get_cfg(print = F)
-  d <- get_interims(cfg)
-  
-  d2 <- data.table(d)
-  names(d2) <- c("idx_start", "idx_end", "t_start", "t_end", "n")
-  d2[, t_diff:= t_end - t_start]
-  d2
-}
-
-# early interim, no fu - reftime is the time of interim for all
-play_censoring_nofu1 <- function(){
-  
-  library(OrvacRCT);  library(configr); library(optparse); library(data.table);  source("setup.R")
-  set.seed(1); cfg <- get_cfg(print = F)
-  # set state based on first interim
-  cur_intrm_idx = 6
-  ret <- test_set_state(cfg, dofu = F, cur_intrm_idx, n_target = 0, ref_time = 0)
-  dat <- data.table(ret$dat);   names(dat) <- cfg$dnames
-  dat[, acc_plus_evtt:= accrt + evtt]
-  dat[, age_plus_evtt:= age + evtt]
-  dat[, time_of_maxfu:= accrt + cfg$max_age_fu - age]
-  # dat[, evtt_b4_ref:= acc_plus_evtt < refime]
-  # dat[, age_b4_ref:= acc_plus_evtt < refime]
-  intrms2 <- data.table(ret$intrm);   names(intrms2) <- c("idx_start", "idx_end", "t_start", "t_end", "n")
-  intrms2[, t_diff:= t_end - t_start]
-  intrms2[cur_intrm_idx+1,]
-}
-
-# late interim, no fu - reftime is the time of interim for all
-play_censoring_nofu2 <- function(){
-  
-  library(OrvacRCT);  library(configr); library(optparse); library(data.table);  source("setup.R")
-  set.seed(1); cfg <- get_cfg(print = F)
-  # set state based on first interim
-  cur_intrm_idx = 17
-  ret <- test_set_state(cfg, dofu = F, cur_intrm_idx, n_target = 0, ref_time = 0)
-  dat <- data.table(ret$dat);   names(dat) <- cfg$dnames
-  dat[, acc_plus_evtt:= accrt + evtt]
-  dat[, age_plus_evtt:= age + evtt]
-  dat[, time_of_maxfu:= accrt + cfg$max_age_fu - age]
-  # dat[, evtt_b4_ref:= acc_plus_evtt < refime]
-  # dat[, age_b4_ref:= acc_plus_evtt < refime]
-  intrms2 <- data.table(ret$intrm);   names(intrms2) <- c("idx_start", "idx_end", "t_start", "t_end", "n")
-  intrms2[, t_diff:= t_end - t_start]
-  intrms2[cur_intrm_idx+1,]
-}
-
-# final at max n - reftime is max fu time for each sub
-play_censoring_dofu1 <- function(){
-  
-  # at max sample size for a final 
-  library(OrvacRCT);  library(configr); library(optparse); library(data.table);  source("setup.R")
-  set.seed(2); cfg <- get_cfg(print = F)
-  # cur_intrm_idx is irrelevant as n_target is provided and reftime computed
-  cur_intrm_idx = 17
-  ret <- test_set_state(cfg, dofu = T, cur_intrm_idx, n_target = 1000, ref_time = 0)
-  dat <- data.table(ret$dat);  names(dat) <- cfg$dnames
-  dat[, acc_plus_evtt:= accrt + evtt]
-  dat[, age_plus_evtt:= age + evtt]
-  dat[, time_of_maxfu:= accrt + cfg$max_age_fu - age]
-}
-
-# final at enrolled < nmax - reftime is max fu time for each sub
-play_censoring_dofu2 <- function(){
-  
-  # at max sample size for a final 
-  library(OrvacRCT);  library(configr); library(optparse); library(data.table);  source("setup.R")
-  set.seed(2); cfg <- get_cfg(print = F)
-  # cur_intrm_idx is irrelevant as n_target is provided and reftime computed
-  cur_intrm_idx = 17
-  # ref_time set to zero so that all are computed to max fu
-  ret <- test_set_state(cfg, dofu = T, cur_intrm_idx, n_target = 605, ref_time = 0)
-  dat <- data.table(ret$dat);  names(dat) <- cfg$dnames
-  dat[, acc_plus_evtt:= accrt + evtt]
-  dat[, age_plus_evtt:= age + evtt]
-  dat[, time_of_maxfu:= accrt + cfg$max_age_fu - age]
-}
-
-# interim at < nmax - reftime is max fu time for each sub
-play_censoring_dofu3 <- function(){
-  
-  # at max sample size for a final 
-  library(OrvacRCT);  library(configr); library(optparse); library(data.table);  source("setup.R")
-  set.seed(3); cfg <- get_cfg(print = F)
-  # cur_intrm_idx is irrelevant as n_target is provided and reftime computed
-  cur_intrm_idx = 17
-  # ref_time set to zero so that all are computed to max fu
-  ret <- test_set_state(cfg, dofu = T, cur_intrm_idx, n_target = 569, ref_time = 58.06967)
-  dat <- data.table(ret$dat);  names(dat) <- cfg$dnames
-  dat[, acc_plus_evtt:= accrt + evtt]
-  dat[, age_plus_evtt:= age + evtt]
-  dat[, time_of_maxfu:= accrt + cfg$max_age_fu - age]
-  
-  intrms2 <- data.table(ret$intrm);   names(intrms2) <- c("idx_start", "idx_end", "t_start", "t_end", "n")
-  intrms2[, t_diff:= t_end - t_start]
-  intrms2[cur_intrm_idx+1,]
-}
 
 main <- function(){
 
@@ -166,7 +28,7 @@ main <- function(){
   debug = F
   cl <- NA
   if(!debug){
-    cl <- makeCluster(parallel::detectCores() - 2, outfile="")
+    cl <- makeCluster(parallel::detectCores() - 4, outfile="")
     # cl <- makeCluster(3, outfile="")
     registerDoParallel(cl)
   } else {
@@ -174,6 +36,11 @@ main <- function(){
   }
   
   cfg <- get_cfg(print = F)
+  if(debug){  
+    cfg$n_sims = 1; 
+    cfg$sero_info_delay = 0.5;  
+    cfg$post_draw = 10
+  }
 
   results <- foreach(i = 1:cfg$n_sims,
                    .errorhandling = 'pass',
@@ -183,6 +50,8 @@ main <- function(){
     
     # i = 1
     set.seed(cfg$seed + i)
+
+    if(debug) {set.seed(1)}
     
     res <- simulate_trial(i, cfg, T)
   
