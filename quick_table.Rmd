@@ -92,7 +92,7 @@ for(fname in resfiles){
   nsim <- d1$cfg$n_sims
   # true values for median surv (mnth)
   baseclin <- d1$cfg$ctl_med_tte
-  trtclin <- d1$cfg$ctl_med_tte
+  trtclin <- d1$cfg$trt_med_tte
   # true values for seroconversion prob
   basesero <- d1$cfg$baseline_prob_sero
   trtsero <- d1$cfg$trt_prob_sero
@@ -103,54 +103,46 @@ for(fname in resfiles){
   # thresholds
   post_final_thresh <- d1$cfg$thresh_p_sup
   
-  # what did we conclude from interims
-  outcome_labs <- c("Futile", "ES", "Inconclusive")
+  # what decisions were made at interims?
+  intrm_dec_labs <- c("Fut", "ES", "SV", "ND")
   df_res$interim_outcome <- NA
   df_res$interim_outcome <- ifelse(df_res$stop_i_fut == 1 | 
                                      df_res$stop_c_fut == 1, 1, df_res$interim_outcome)
   df_res$interim_outcome <- ifelse(df_res$stop_c_sup == 1, 2, df_res$interim_outcome)
-  df_res$interim_outcome <- ifelse(df_res$inconclu == 1, 3, df_res$interim_outcome)
+  df_res$interim_outcome <- ifelse(df_res$stop_v_samp == 1, 3, df_res$interim_outcome)
+  # in all other cases we made no decision
+  df_res$interim_outcome <- ifelse(is.na(df_res$interim_outcome), 4, df_res$interim_outcome)
   df_res$interim_outcome <- factor(df_res$interim_outcome, 
-                                   levels = 1:3, 
-                                   labels = outcome_labs)
+                                   levels = 1:4, 
+                                   labels = intrm_dec_labs)
+  prob <- prop.table(table(df_res$interim_outcome))
   
-  # trials are either futile or have es 
-  df_outcome <- df_res %>%
-    dplyr::filter(interim_outcome %in% c("Futile", "ES", "Inconclusive") )
-    
-  df_stopv <- df_res %>%
-    dplyr::filter(stop_v_samp == 1) 
+  # prob of successful trials at final
+  probimmi <- sum(df_res$i_final[df_res$i_final == 1])/nrow(df_res)
+  probclin <- sum(df_res$c_final[df_res$c_final == 1])/nrow(df_res)
   
-  n <- c(table(df_res$interim_outcome),   nrow(df_stopv))
-  names(n) <- c("Futile","ES","Inconclusive", "StopV"    )
-  prob <- c(prop.table(table(df_res$interim_outcome)),   
-            nrow(df_stopv)/max(df_res$idxsim))
-  names(prob) <- c(names(prob)[1:3], "StopV")
-
-  df_ss_clin <- df_outcome %>% 
+  # sample size
+  df_ss_enrlld <- df_res %>% 
+    dplyr::summarise(ss_mean = mean(n_enrolled), 
+                     ss_sd = sd(n_enrolled)) 
+  df_ss_clin <- df_res %>% 
     dplyr::summarise(ss_mean = mean(ss_clin), 
                      ss_sd = sd(ss_clin)) 
-  
-  df_ss_immu <- df_outcome %>% 
+  df_ss_immu <- df_res %>% 
     dplyr::summarise(ss_mean = mean(ss_immu), 
                      ss_sd = sd(ss_immu)) 
   
-  df_outcome$look_cut <- cut(df_outcome$n_enrolled, breaks = c(0, 250, 500, 750, 1000), 
-                             include.lowest = T, right = F)
-  
-  prob_ss <- prop.table(table(df_outcome$look_cut))
+  # probability of sample size
+  ss_cut <- cut(df_res$n_enrolled, breaks = c(0, 250, 500, 750, 1000), 
+                include.lowest = T, right = F)
+  prob_ss <- prop.table(table(ss_cut))
   prob_ss <- as.numeric(cumsum(prob_ss))
-  
-  # what did the final analysis say?
-  probimmi <- sum(df_res$i_final[df_res$i_final==1])/max(df_res$idxsim)
-  probclin <- sum(df_res$c_final[df_res$c_final==1])/max(df_res$idxsim)
-  
+
   flab <- gsub("res-", "", fname)
   flab <- gsub('.RDS', "", flab)
   
   mydate <- as.POSIXlt(flab, format="%Y-%m-%d-%H-%M-%S")
   
-
   dtmp <- data.frame(idsim = d1$cfg$id_sim,
                      nsim = nsim,
 
@@ -161,21 +153,19 @@ for(fname in resfiles){
                      accrual = accrual,
                      info_delay = info_delay,
                      
+                     # probability of each decision over interims
                      prob_sup = prob["ES"],
-                     prob_fut = prob["Futile"],
-                     prob_incon = prob["Inconclusive"],
-                     prob_stopv = prob["StopV"],
+                     prob_fut = prob["Fut"],
+                     prob_sv = prob["SV"],
+                     prob_nd = prob["ND"],
                      
-                     n_sup = n["ES"],
-                     n_fut = n["Futile"],
-                     n_incon = n["Inconclusive"],
-                     n_stopv = n["StopV"],
-    
+                     # probability of success at final
+                     prob_fin_immi = probimmi,
+                     prob_fin_clin = probclin,
+
                      # overall mean ss for clin and immu
-    
-                     ss_clin_mean = as.numeric(df_ss_clin["ss_mean"]),
-                     ss_clin_sd = as.numeric(df_ss_clin["ss_sd"]),
-    
+                     ss_enrlld_mean = as.numeric(df_ss_enrlld["ss_mean"]),
+                     ss_enrlld_sd = as.numeric(df_ss_enrlld["ss_sd"]),
                      ss_immu_mean = as.numeric(df_ss_immu["ss_mean"]),
                      ss_immu_sd = as.numeric(df_ss_immu["ss_sd"]),
     
@@ -183,45 +173,33 @@ for(fname in resfiles){
                      prob_ss_lt500 = as.numeric(prob_ss[2]),
                      prob_ss_lt750 = as.numeric(prob_ss[3]),
                      prob_ss_lt1k = as.numeric(prob_ss[4]),
-
-                     # probability of success at the final analysis 
-                     # (proportion of trials where final analysis 
-                     # showed a difference b/w groups)
                      
-                     # the rest did not show a difference
-                     prob_fin_immi = probimmi,
-                     prob_fin_clin = probclin,
-    
                      fname = flab, stringsAsFactors = F, 
                      date = mydate,
     durn = as.numeric(d1$duration))
   
   # summary data
   dtmp <- dtmp %>%
-    dplyr::mutate(f_prob_sup = sprintf("%.3f", prob_sup, n_sup),
-                  f_prob_fut = sprintf("%.3f", prob_fut, n_fut),
-                  f_prob_stopv = sprintf("%.3f", prob_stopv, n_stopv),
-                  f_prob_incon = sprintf("%.3f", prob_incon, n_incon),
+    dplyr::mutate(f_prob_sup = sprintf("%.3f", prob_sup),
+                  f_prob_fut = sprintf("%.3f", prob_fut),
+                  f_prob_sv = sprintf("%.3f", prob_sv),
+                  f_prob_nd = sprintf("%.3f", prob_nd),
                   
-                  f_ss_clin = sprintf("%.0f (%.1f)", ss_clin_mean, ss_clin_sd),
+                  f_prob_fin_i = sprintf("%.3f", prob_fin_immi),
+                  f_prob_fin_c = sprintf("%.3f", prob_fin_clin),
+                  
+                  f_ss_enrl = sprintf("%.0f (%.1f)", ss_enrlld_mean, ss_enrlld_sd),
                   f_ss_immu = sprintf("%.0f (%.1f)", ss_immu_mean, ss_immu_sd),
-      
+
                   f_ss_lt1 = sprintf("%.2f", prob_ss_lt250),
                   f_ss_lt2 = sprintf("%.2f", prob_ss_lt500),
                   f_ss_lt3 = sprintf("%.2f", prob_ss_lt750),
-                  f_ss_lt4 = sprintf("%.2f", prob_ss_lt1k),
-      
-                  f_prob_fin_immi = sprintf("%.3f", prob_fin_immi),
-                  f_prob_fin_clin = sprintf("%.3f", prob_fin_clin) 
+                  f_ss_lt4 = sprintf("%.2f", prob_ss_lt1k)
                   )
 
   df_all <- rbind(df_all,  dtmp, stringsAsFactors  = F)
   
-  # figures
-  df_outcome$fname <- fname
-  df_outcome$simname <- d1$cfg$idsim
-  df_fig1 <- rbind(df_fig1,  df_outcome, stringsAsFactors  = F)
-  
+
   df_res$mysim <- mysim
   mysim <- mysim + 1
   df_res_all <- rbind(df_res_all, df_res)
@@ -232,22 +210,15 @@ for(fname in resfiles){
 df_0 <- df_all %>%
   dplyr::arrange(desc(fname)) %>%
   dplyr::mutate(row = 1:n()) %>%
-  dplyr::select(row, 
-                baseclin, trtclin, basesero, trtsero, accrual,info_delay,
-                f_prob_sup, f_prob_fut, f_prob_stopv, f_prob_incon, 
-                f_ss_clin, f_ss_immu, 
+  dplyr::select(baseclin, trtclin, basesero, trtsero, accrual,info_delay,
+                f_prob_sup, f_prob_fut, f_prob_sv, f_prob_nd, 
+                f_prob_fin_i, f_prob_fin_c,
+                f_ss_enrl, f_ss_immu, 
                 f_ss_lt1, f_ss_lt2, f_ss_lt3,
-                f_prob_fin_clin, f_prob_fin_immi, 
-                fname, nsim, idsim,  date, durn) %>%
-  dplyr::select(-row)
+                nsim, durn, fname, idsim,  date, row)
 
 
-df_blank <- df_0 %>% dplyr::slice(1L) 
 
-
-digits <- c(0, 0, 2, 2, 0, 2,
-            0, 0, 0, 0, 0,0,0,
-            0, 0, 0, 0,  0, 0, 3)
 options(knitr.kable.NA = '-')
 showwarn <- length(mywarnings > 0)
 
@@ -264,15 +235,28 @@ print("WARNINGS PRESENT IN DATA!!")
 
 
 ```{r, echo = F, eval = T}
+digits <- c(0, 0, 2, 2, 
+            0, 2,
+            0, 0, 0, 0, 
+            0, 0,
+            0, 0, 
+            0, 0, 0, 
+            0, 2, 0, 0)
 
 kable(df_0 %>% 
-  dplyr::select(-idsim, -date) %>%
-    dplyr::arrange(desc(fname))  ,
-      caption = paste0("Table 6. Combined Simulation Results"),
-      col.names = c("ctl", "trt", "ctl", "trt", "accrual", "delay",
+  dplyr::arrange(desc(fname)) %>%
+    dplyr::mutate(d = trtclin - baseclin,
+                  g = trtsero - basesero) %>%
+    dplyr::filter(d != 0 & g!= 0) %>%
+  dplyr::select(-date, -fname, -d, -g),
+      caption = paste0("Table 6. Simulation Results (", nrow(df_0), " rows)"),
+      col.names = c("ctl", "trt", "ctl", "trt", 
+                    "accrual", "delay",
                     "e.s.", "e.f", "s.v.", "n.d", 
-                    "enrolled", "blood res", "P(<250)", "P(<500)", "P(<750)", 
-                    "clin", "immu",  "fname", "nsim", "duration"),
+                    "p.clin", "p.immu",
+                    "enrolled", "bloods", 
+                    "P(<250)", "P(<500)", "P(<750)", 
+                    "nsim", "durn.hr", "idsim", "row"),
       digits = digits) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = F, position = "left",
@@ -281,46 +265,84 @@ kable(df_0 %>%
   add_header_above(c("Clinical" = 2, "Seroconversion" = 2, 
                      "Info rate" = 2, 
                      "Interim" = 4,
+                     "Final" = 2,
                      "SS" = 5, 
-                     "Wins @ final" = 2, " " = 3))
+                     " " = 4))
 
 ```
 
 
+```{r, echo = F, eval = T}
+digits <- c(0, 0, 2, 2, 
+            0, 2,
+            0, 0, 0, 0, 
+            0, 0,
+            0, 0, 
+            0, 0, 0, 
+            0, 2, 0, 0)
+
+kable(df_0 %>% 
+  dplyr::arrange(desc(fname)) %>%
+    dplyr::mutate(d = trtclin - baseclin,
+                  g = trtsero - basesero) %>%
+    dplyr::filter(d == 0 & g == 0) %>%
+  dplyr::select(-date, -fname, -d, -g),
+      caption = paste0("Table 6. Null case results (", nrow(df_0), " rows)"),
+      col.names = c("ctl", "trt", "ctl", "trt", 
+                    "accrual", "delay",
+                    "e.s.", "e.f", "s.v.", "n.d", 
+                    "p.clin", "p.immu",
+                    "enrolled", "bloods", 
+                    "P(<250)", "P(<500)", "P(<750)", 
+                    "nsim", "durn.hr", "idsim", "row"),
+      digits = digits) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = F, position = "left",
+                font_size = 12,
+                latex_options = "hold_position") %>%
+  add_header_above(c("Clinical" = 2, "Seroconversion" = 2, 
+                     "Info rate" = 2, 
+                     "Interim" = 4,
+                     "Final" = 2,
+                     "SS" = 5, 
+                     " " = 4))
+
+```
+
 # Figures
 
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F,  echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = c_p_fin, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Clinical - final posterior prob of trt success")
 ```
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F, echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = c_ppmax, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Clinical - final predictive prob at max")
 ```
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F, echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = c_ppn, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Clinical - predictive prob at interim")
 ```
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F, echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = i_p_fin, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Immunological - final posterior prob of trt success")
 ```
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F, echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = i_ppmax, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Immunological - final predictive prob at max")
 ```
 
-```{r, echo = F, fig.width=4, fig.height=4}
+```{r, eval = F, echo = F, fig.width=4, fig.height=4}
 ggplot(df_res_all, aes(x = i_ppn, group = paste0(mysim)))+
     geom_density()+
   ggtitle("Immunological - predictive prob at interim")
