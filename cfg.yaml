@@ -65,12 +65,12 @@ prior_gamma_b: 40
 
 
 thresh_pp_fut: 0.05
-thresh_pp_es: 0.96
-thresh_p_sup: 0.96
+thresh_pp_es: 0.90
+thresh_p_sup: 0.97
 thresh_p_fut: 0.05
 
 # conjugate posterior
-post_draw: 5000
+post_draw: 2000
 
 
 
